@@ -1,12 +1,15 @@
 package com.khanearam.shop
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 // تم صورتی و بنفش ملایم
 object Brand {
@@ -62,5 +65,15 @@ private val darkScheme = darkColorScheme(
 
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkScheme else lightScheme, content = content)
+    MaterialTheme(
+        colorScheme = if (isSystemInDarkTheme()) darkScheme else lightScheme,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(10.dp),
+            small = RoundedCornerShape(14.dp),
+            medium = RoundedCornerShape(18.dp),
+            large = RoundedCornerShape(24.dp),
+            extraLarge = RoundedCornerShape(30.dp)
+        ),
+        content = content
+    )
 }

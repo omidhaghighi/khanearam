@@ -27,7 +27,12 @@ data class Product(
     val ingredients: String = "",
     val related: List<Product> = emptyList(),
     val preorder: Boolean = false,
-    val preorderNote: String = ""
+    val preorderNote: String = "",
+    val shortDescription: String = "",
+    val sku: String = "",
+    val dimensions: String = "",
+    val attrs: List<Pair<String, String>> = emptyList(),
+    val tags: List<String> = emptyList()
 ) {
     val onSale: Boolean get() = salePrice > 0 && salePrice < price
     val finalPrice: Long get() = if (onSale) salePrice else price

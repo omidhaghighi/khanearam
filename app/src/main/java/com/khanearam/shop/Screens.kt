@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -102,7 +104,7 @@ fun <T> Loader(key: Any?, load: suspend () -> T, content: @Composable (T) -> Uni
         ) {
             Text(s.exceptionOrNull()?.message ?: "خطا در دریافت اطلاعات", textAlign = TextAlign.Center)
             Spacer(Modifier.height(12.dp))
-            Button(onClick = { retry++ }) { Text("تلاش دوباره") }
+            FancyButton(onClick = { retry++ }) { Text("تلاش دوباره") }
         }
     } else {
         content(s.getOrThrow())
@@ -111,17 +113,12 @@ fun <T> Loader(key: Any?, load: suspend () -> T, content: @Composable (T) -> Uni
 
 @Composable
 fun TopBack(title: String, nav: NavController) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { nav.popBackStack() }) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
-        }
-        Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-    }
+    GradientTopBar(title, nav)
 }
 
 @Composable
 fun Empty(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text, color = Color.Gray) }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { EmptyState("🌸", text) }
 }
 
 @Composable
@@ -136,9 +133,17 @@ fun PriceText(p: Product) {
 
 @Composable
 fun ProductCard(modifier: Modifier, p: Product, nav: NavController) {
+    var justAdded by remember { mutableStateOf(false) }
+    LaunchedEffect(justAdded) {
+        if (justAdded) {
+            delay(1200)
+            justAdded = false
+        }
+    }
     Card(
         modifier.clickable { nav.navigate("product/${p.id}") },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
@@ -153,6 +158,19 @@ fun ProductCard(modifier: Modifier, p: Product, nav: NavController) {
                     if (p.onSale) Badge2("تخفیف", Brand.pink)
                     if (p.isNew) Badge2("جدید", Brand.violet)
                     if (p.isPopular) Badge2("پرفروش", Brand.violetDeep)
+                }
+                if (p.stock > 0) {
+                    Box(
+                        Modifier.align(Alignment.BottomEnd).padding(8.dp).size(36.dp)
+                            .clip(CircleShape).background(if (justAdded) Color(0xFF2E7D32) else Brand.violet)
+                            .clickable {
+                                Store.addToCart(p)
+                                justAdded = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(if (justAdded) Icons.Filled.Check else Icons.Filled.Add, contentDescription = "افزودن به سبد", tint = Color.White)
+                    }
                 }
             }
             Column(Modifier.padding(10.dp)) {
@@ -234,7 +252,7 @@ fun ListScreen(nav: NavController, cat: Int) {
         if (showFilter) {
             FilterDialog(brands, brand, minP, maxP, onApply = { b, mn, mx -> brand = b; minP = mn; maxP = mx; showFilter = false }, onDismiss = { showFilter = false })
         }
-        OutlinedButton(onClick = { showFilter = true }, modifier = Modifier.padding(horizontal = 16.dp)) {
+        SoftButton(onClick = { showFilter = true }, modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(if (brand != 0 || minP.isNotBlank() || maxP.isNotBlank()) "فیلتر برند و قیمت (فعال)" else "فیلتر برند و قیمت")
         }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -250,10 +268,13 @@ fun ListScreen(nav: NavController, cat: Int) {
             Empty("محصولی پیدا نشد")
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
+                if (applied.isBlank()) {
+                    item { PromoPager(Promos.shop, nav, Modifier.padding(top = 6.dp, bottom = 6.dp), 92.dp) }
+                }
                 items(list.chunked(2)) { row -> ProductRow(row, nav) }
                 item {
                     if (page < pages) {
-                        Button(onClick = { more++ }, enabled = !loading, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        FancyButton(onClick = { more++ }, enabled = !loading, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                             Text(if (loading) "در حال دریافت..." else "نمایش بیشتر")
                         }
                     }
@@ -288,7 +309,21 @@ fun ProductScreen(nav: NavController, id: Int) {
                         color = if (p.stock > 0) Color(0xFF2E7D32) else if (p.preorder) Color(0xFFEF6C00) else Color.Red
                     )
                     if (p.stock <= 0 && p.preorder && p.preorderNote.isNotBlank()) Text(p.preorderNote, fontSize = 13.sp)
+                    if (p.shortDescription.isNotBlank()) Text(p.shortDescription, color = Color.Gray)
                     if (p.description.isNotBlank()) Text(p.description)
+                    if (p.attrs.isNotEmpty()) {
+                        Text("مشخصات", fontWeight = FontWeight.Bold)
+                        p.attrs.forEach { kv ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                Text(kv.first, modifier = Modifier.weight(1f), fontSize = 13.sp, color = Color.Gray)
+                                Text(kv.second, modifier = Modifier.weight(2f), fontSize = 13.sp)
+                            }
+                        }
+                    }
+                    if (p.sku.isNotBlank()) Text("شناسه کالا: ${p.sku}", fontSize = 13.sp)
+                    if (p.weight > 0) Text("وزن: ${p.weight} گرم", fontSize = 13.sp)
+                    if (p.dimensions.isNotBlank()) Text("ابعاد: ${p.dimensions}", fontSize = 13.sp)
+                    if (p.tags.isNotEmpty()) Text("برچسب‌ها: " + p.tags.joinToString("، "), fontSize = 13.sp)
                     if (p.brand.isNotBlank()) Text("برند: ${p.brand}", fontSize = 13.sp)
                     if (p.expiry.isNotBlank()) Text("تاریخ انقضا: ${p.expiry}", fontSize = 13.sp)
                     if (p.ingredients.isNotBlank()) {
@@ -296,7 +331,7 @@ fun ProductScreen(nav: NavController, id: Int) {
                         Text(p.ingredients, fontSize = 13.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Button(
+                        FancyButton(
                             onClick = {
                                 Store.addToCart(p)
                                 added = true
@@ -313,10 +348,10 @@ fun ProductScreen(nav: NavController, id: Int) {
                         }
                     }
                     if (p.stock > 0 && Store.loggedIn) {
-                        OutlinedButton(onClick = { quick = true }, modifier = Modifier.fillMaxWidth()) { Text("خرید با یک کلیک") }
+                        SoftButton(onClick = { quick = true }, modifier = Modifier.fillMaxWidth()) { Text("خرید با یک کلیک") }
                     }
                     if (p.stock <= 0 && !p.preorder && Store.loggedIn) {
-                        OutlinedButton(
+                        SoftButton(
                             enabled = !notified,
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
@@ -327,7 +362,7 @@ fun ProductScreen(nav: NavController, id: Int) {
                             }
                         ) { Text(if (notified) "وقتی موجود شد خبرتان می‌کنیم" else "موجود شد خبرم کن") }
                     }
-                    OutlinedButton(
+                    SoftButton(
                         onClick = {
                             Store.addCompare(p)
                             if (Store.compare.size == 2) nav.navigate("compare") else compareMsg = true
@@ -392,7 +427,7 @@ fun ReviewsSection(productId: Int, nav: NavController) {
                 }
             }
             OutlinedTextField(text, { text = it }, label = { Text("نظر شما (اختیاری)") }, minLines = 2, modifier = Modifier.fillMaxWidth())
-            Button(
+            FancyButton(
                 enabled = !busy,
                 onClick = {
                     busy = true
@@ -417,11 +452,17 @@ fun ReviewsSection(productId: Int, nav: NavController) {
 @Composable
 fun CartScreen(nav: NavController) {
     Column(Modifier.fillMaxSize()) {
-        Text("سبد خرید", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+        TabHeader("سبد خرید", if (Store.cart.isEmpty()) "" else "${Store.cart.sumOf { it.qty }} کالا در سبد شما")
         if (Store.cart.isEmpty()) {
-            Empty("سبد خرید شما خالی است")
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                EmptyState("🛒", "سبد خرید شما خالی است")
+                FancyButton(onClick = { Store.query = ""; nav.navigate("list/0") }) { Text("شروع خرید") }
+                Spacer(Modifier.height(8.dp))
+                PromoPager(Promos.club, nav, Modifier.padding(top = 12.dp))
+                SuggestSlider(nav)
+            }
         } else {
-            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(Store.cart.toList(), key = { it.productId }) { c ->
                     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -445,6 +486,7 @@ fun CartScreen(nav: NavController) {
                         }
                     }
                 }
+                item { SuggestSlider(nav, "شاید اینها را هم بپسندید") }
             }
             Column(Modifier.padding(16.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -452,7 +494,7 @@ fun CartScreen(nav: NavController) {
                     Text(money(Store.cartTotal()), fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(8.dp))
-                Button(
+                FancyButton(
                     onClick = { nav.navigate(if (Store.loggedIn) "checkout" else "auth") },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("ادامه ثبت سفارش") }
@@ -475,7 +517,9 @@ fun AuthScreen(nav: NavController) {
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
         TopBack(if (register) "ثبت‌نام" else "ورود", nav)
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PromoPager(Promos.club, nav)
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (register) {
                 OutlinedTextField(name, { name = it }, label = { Text("نام و نام خانوادگی") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
@@ -497,7 +541,7 @@ fun AuthScreen(nav: NavController) {
                 OutlinedTextField(ref, { ref = it }, label = { Text("کد دعوت (اختیاری)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             }
             if (err.isNotEmpty()) Text(err, color = Color.Red)
-            Button(
+            FancyButton(
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
@@ -516,6 +560,7 @@ fun AuthScreen(nav: NavController) {
             TextButton(onClick = { register = !register; err = "" }) {
                 Text(if (register) "حساب دارید؟ ورود" else "حساب ندارید؟ ثبت‌نام")
             }
+            }
         }
     }
 }
@@ -525,11 +570,16 @@ fun AuthScreen(nav: NavController) {
 @Composable
 fun FavsScreen(nav: NavController) {
     Column(Modifier.fillMaxSize()) {
-        Text("علاقه‌مندی‌ها", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+        TabHeader("علاقه‌مندی‌ها", if (Store.favs.isEmpty()) "" else "${Store.favs.size} محصول")
         if (Store.favs.isEmpty()) {
-            Empty("لیست علاقه‌مندی‌ها خالی است")
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                EmptyState("💜", "لیست علاقه‌مندی‌ها خالی است")
+                FancyButton(onClick = { Store.query = ""; nav.navigate("list/0") }) { Text("دیدن محصولات") }
+                Spacer(Modifier.height(8.dp))
+                SuggestSlider(nav, "پیشنهاد برای شما")
+            }
         } else {
-            LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(Store.favs.toList(), key = { it.id }) { f ->
                     Card(
                         Modifier.fillMaxWidth().clickable { nav.navigate("product/${f.id}") },
@@ -577,13 +627,15 @@ fun AccountScreen(nav: NavController) {
     LaunchedEffect(Store.loggedIn) {
         me = if (Store.loggedIn) withContext(Dispatchers.IO) { runCatching { Api.me() }.getOrNull() } else null
     }
+    Column(Modifier.fillMaxSize()) {
+    TabHeader("حساب من", if (Store.loggedIn) "" else "وارد شوید و از امکانات باشگاه لذت ببرید")
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 14.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("حساب من", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        PromoPager(Promos.account, nav, Modifier, 96.dp, 0.dp)
         if (Store.loggedIn) {
-            Text("سلام ${Store.userName}")
+            Text("سلام ${Store.userName} 👋", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             val m = me
             if (m != null) {
                 Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
@@ -597,7 +649,7 @@ fun AccountScreen(nav: NavController) {
                     }
                 }
                 if (!m.dailyClaimed) {
-                    Button(
+                    FancyButton(
                         onClick = {
                             scope.launch {
                                 val r = withContext(Dispatchers.IO) { runCatching { Api.daily() } }
@@ -609,11 +661,11 @@ fun AccountScreen(nav: NavController) {
                     ) { Text("دریافت جایزه امروز") }
                 }
                 if (m.birthday.isBlank()) {
-                    OutlinedButton(onClick = { showBirthday = true }, modifier = Modifier.fillMaxWidth()) { Text("ثبت تاریخ تولد (هدیه تولد)") }
+                    SoftButton(onClick = { showBirthday = true }, modifier = Modifier.fillMaxWidth()) { Text("ثبت تاریخ تولد (هدیه تولد)") }
                 }
                 if (accMsg.isNotEmpty()) Text(accMsg, color = Color(0xFF2E7D32))
-                OutlinedButton(onClick = { nav.navigate("wheel") }, modifier = Modifier.fillMaxWidth()) { Text("گردونه شانس") }
-                OutlinedButton(
+                SoftButton(onClick = { nav.navigate("wheel") }, modifier = Modifier.fillMaxWidth()) { Text("گردونه شانس") }
+                SoftButton(
                     onClick = {
                         val send = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -624,28 +676,28 @@ fun AccountScreen(nav: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("دعوت دوستان") }
             }
-            OutlinedButton(onClick = { nav.navigate("orders") }, modifier = Modifier.fillMaxWidth()) { Text("سفارش‌های من") }
-            OutlinedButton(onClick = { nav.navigate("wallet") }, modifier = Modifier.fillMaxWidth()) { Text("کیف پول و کارت هدیه") }
-            OutlinedButton(onClick = { nav.navigate("addresses") }, modifier = Modifier.fillMaxWidth()) { Text("آدرس‌های من") }
-            OutlinedButton(onClick = { nav.navigate("family") }, modifier = Modifier.fillMaxWidth()) { Text("اعضای خانواده") }
-            OutlinedButton(onClick = { nav.navigate("support") }, modifier = Modifier.fillMaxWidth()) { Text("پشتیبانی و مشاوره") }
-            OutlinedButton(onClick = { Store.logout() }, modifier = Modifier.fillMaxWidth()) { Text("خروج از حساب") }
+            SoftButton(onClick = { nav.navigate("orders") }, modifier = Modifier.fillMaxWidth()) { Text("سفارش‌های من") }
+            SoftButton(onClick = { nav.navigate("wallet") }, modifier = Modifier.fillMaxWidth()) { Text("کیف پول و کارت هدیه") }
+            SoftButton(onClick = { nav.navigate("addresses") }, modifier = Modifier.fillMaxWidth()) { Text("آدرس‌های من") }
+            SoftButton(onClick = { nav.navigate("family") }, modifier = Modifier.fillMaxWidth()) { Text("اعضای خانواده") }
+            SoftButton(onClick = { nav.navigate("support") }, modifier = Modifier.fillMaxWidth()) { Text("پشتیبانی و مشاوره") }
+            SoftButton(onClick = { Store.logout() }, modifier = Modifier.fillMaxWidth()) { Text("خروج از حساب") }
             TextButton(onClick = { confirmDelete = true }) { Text("حذف حساب کاربری", color = Color.Red) }
         } else {
-            Button(onClick = { nav.navigate("auth") }, modifier = Modifier.fillMaxWidth()) { Text("ورود / ثبت‌نام") }
+            FancyButton(onClick = { nav.navigate("auth") }, modifier = Modifier.fillMaxWidth()) { Text("ورود / ثبت‌نام") }
         }
         if (msg.isNotEmpty()) Text(msg, color = Color.Red)
-        OutlinedButton(onClick = { nav.navigate("verify") }, modifier = Modifier.fillMaxWidth()) { Text("تأیید اصالت کالا با کد") }
-        OutlinedButton(onClick = { nav.navigate("lock") }, modifier = Modifier.fillMaxWidth()) { Text("قفل اپ و اثر انگشت") }
-        OutlinedButton(onClick = { nav.navigate("articles") }, modifier = Modifier.fillMaxWidth()) { Text("مقالات آموزشی") }
-        OutlinedButton(onClick = { nav.navigate("about") }, modifier = Modifier.fillMaxWidth()) { Text("درباره ما، قوانین و حریم خصوصی") }
-        OutlinedButton(onClick = { nav.navigate("faq") }, modifier = Modifier.fillMaxWidth()) { Text("سؤال‌های متداول") }
-        OutlinedButton(onClick = { nav.navigate("notif") }, modifier = Modifier.fillMaxWidth()) { Text("تنظیمات اعلان‌ها") }
+        SoftButton(onClick = { nav.navigate("verify") }, modifier = Modifier.fillMaxWidth()) { Text("تأیید اصالت کالا با کد") }
+        SoftButton(onClick = { nav.navigate("lock") }, modifier = Modifier.fillMaxWidth()) { Text("قفل اپ و اثر انگشت") }
+        SoftButton(onClick = { nav.navigate("articles") }, modifier = Modifier.fillMaxWidth()) { Text("مقالات آموزشی") }
+        SoftButton(onClick = { nav.navigate("about") }, modifier = Modifier.fillMaxWidth()) { Text("درباره ما، قوانین و حریم خصوصی") }
+        SoftButton(onClick = { nav.navigate("faq") }, modifier = Modifier.fillMaxWidth()) { Text("سؤال‌های متداول") }
+        SoftButton(onClick = { nav.navigate("notif") }, modifier = Modifier.fillMaxWidth()) { Text("تنظیمات اعلان‌ها") }
         HorizontalDivider()
         val c = cfg
         if (c != null) {
             if (c.phone.isNotBlank()) {
-                OutlinedButton(
+                SoftButton(
                     onClick = { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + c.phone))) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -655,7 +707,7 @@ fun AccountScreen(nav: NavController) {
                 }
             }
             if (c.whatsapp.isNotBlank()) {
-                OutlinedButton(
+                SoftButton(
                     onClick = {
                         val num = c.whatsapp.filter { it.isDigit() }
                         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$num")))
@@ -665,6 +717,7 @@ fun AccountScreen(nav: NavController) {
             }
             if (c.about.isNotBlank()) Text(c.about)
         }
+    }
     }
     if (showBirthday) BirthdayDialog(onDone = { showBirthday = false; reload() }, onDismiss = { showBirthday = false })
     if (confirmDelete) {
@@ -705,12 +758,14 @@ fun WheelScreen(nav: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text("امتیاز شما: $points", fontSize = 18.sp)
-                Card(Modifier.fillMaxWidth().height(140.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(shown, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center)
-                    }
+                Box(
+                    Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(26.dp)).background(Brand.headerGradient),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🎡", fontSize = 64.sp, modifier = Modifier.align(Alignment.TopStart).padding(12.dp))
+                    Text(shown, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
                 }
-                Button(
+                FancyButton(
                     enabled = !spun && !spinning && w.labels.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {

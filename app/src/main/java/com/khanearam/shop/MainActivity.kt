@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -131,7 +132,7 @@ fun AppRoot() {
         Scaffold(
             bottomBar = {
                 if (route in tabs.map { it.first }) {
-                    NavigationBar {
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 10.dp) {
                         tabs.forEach { (r, label, icon) ->
                             NavigationBarItem(
                                 selected = route == r,
@@ -148,7 +149,12 @@ fun AppRoot() {
                                         Icon(icon, null)
                                     }
                                 },
-                                label = { Text(label) }
+                                label = { Text(label) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = Brand.violetDeep,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
                             )
                         }
                     }

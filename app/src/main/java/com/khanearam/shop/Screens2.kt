@@ -96,7 +96,7 @@ import kotlinx.coroutines.withContext
 fun Picker(label: String, current: String, options: List<Pair<String, String>>, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(onClick = { open = true }) {
+        SoftButton(onClick = { open = true }) {
             Text(if (current.isBlank()) label else (options.firstOrNull { it.first == current }?.second ?: current))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -117,7 +117,10 @@ fun Gallery(images: List<String>) {
     var zoom by remember { mutableStateOf<String?>(null) }
     val pager = rememberPagerState(pageCount = { images.size })
     Box {
-        HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().height(300.dp)) { i ->
+        HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+        ) { i ->
             AsyncImage(
                 model = images[i],
                 contentDescription = null,
@@ -130,9 +133,18 @@ fun Gallery(images: List<String>) {
                 "${pager.currentPage + 1} / ${images.size}",
                 color = Color.White,
                 fontSize = 12.sp,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
                     .background(Color(0x99000000), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 2.dp)
             )
+            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)) {
+                for (i in images.indices) {
+                    val on = pager.currentPage == i
+                    Box(
+                        Modifier.padding(horizontal = 3.dp).height(7.dp).width(if (on) 20.dp else 7.dp)
+                            .background(if (on) Brand.pink else Color.White.copy(alpha = 0.8f), RoundedCornerShape(4.dp))
+                    )
+                }
+            }
         }
     }
     val z = zoom
@@ -231,9 +243,9 @@ fun QuickBuyDialog(p: Product, nav: NavController, onDismiss: () -> Unit) {
                     Text("روش ارسال: ${i.method.title} (${if (i.method.cost == 0L) "رایگان" else money(i.method.cost)})", fontSize = 13.sp)
                     Text("مبلغ کل: ${money(p.finalPrice + i.method.cost)}", fontWeight = FontWeight.Bold)
                     if (err.isNotEmpty()) Text(err, color = Color.Red)
-                    Button(enabled = !busy, onClick = { order(false, i) }, modifier = Modifier.fillMaxWidth()) { Text("خرید و پرداخت در محل") }
+                    FancyButton(enabled = !busy, onClick = { order(false, i) }, modifier = Modifier.fillMaxWidth()) { Text("خرید و پرداخت در محل") }
                     if (i.onlinePay) {
-                        OutlinedButton(enabled = !busy, onClick = { order(true, i) }, modifier = Modifier.fillMaxWidth()) { Text("خرید و پرداخت آنلاین") }
+                        SoftButton(enabled = !busy, onClick = { order(true, i) }, modifier = Modifier.fillMaxWidth()) { Text("خرید و پرداخت آنلاین") }
                     }
                 }
             }
@@ -354,14 +366,14 @@ fun CheckoutForm(nav: NavController, d: CheckoutData) {
                 }
             }
             if (cfg.otherCities) {
-                OutlinedButton(onClick = { otherMode = true; city = ""; quoteCity = "" }) { Text("سایر شهرها") }
+                SoftButton(onClick = { otherMode = true; city = ""; quoteCity = "" }) { Text("سایر شهرها") }
             }
         }
         if (otherMode) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(city, { city = it }, label = { Text("نام شهر") }, singleLine = true, modifier = Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { quoteCity = city.trim() }) { Text("محاسبه ارسال") }
+                FancyButton(onClick = { quoteCity = city.trim() }) { Text("محاسبه ارسال") }
             }
         }
         if (!pickup) {
@@ -400,7 +412,7 @@ fun CheckoutForm(nav: NavController, d: CheckoutData) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(code, { code = it }, label = { Text("کد تخفیف") }, singleLine = true, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = {
+            SoftButton(onClick = {
                 scope.launch {
                     val r = withContext(Dispatchers.IO) { runCatching { Api.checkCoupon(code.trim()) } }
                     r.onSuccess { percent = it; applied = code.trim(); err = "" }
@@ -467,7 +479,7 @@ fun CheckoutForm(nav: NavController, d: CheckoutData) {
         if (err.isNotEmpty()) Text(err, color = Color.Red)
         if (saved.isNotEmpty()) Text(saved, color = Color(0xFF2E7D32))
 
-        Button(
+        FancyButton(
             enabled = !busy && Store.cart.isNotEmpty() && methodId != 0,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
@@ -543,7 +555,7 @@ fun OrdersScreen(nav: NavController) {
                                 Text("مبلغ کل: ${money(o.total)}", fontWeight = FontWeight.Bold)
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     if (o.canPay) {
-                                        Button(enabled = !busy, onClick = {
+                                        FancyButton(enabled = !busy, onClick = {
                                             busy = true
                                             msg = ""
                                             scope.launch {
@@ -554,9 +566,9 @@ fun OrdersScreen(nav: NavController) {
                                             }
                                         }) { Text("پرداخت") }
                                     }
-                                    if (o.canEdit) OutlinedButton(onClick = { editing = o }) { Text("ویرایش") }
+                                    if (o.canEdit) SoftButton(onClick = { editing = o }) { Text("ویرایش") }
                                     if (o.canCancel) {
-                                        OutlinedButton(enabled = !busy, onClick = {
+                                        SoftButton(enabled = !busy, onClick = {
                                             busy = true
                                             msg = ""
                                             scope.launch {
@@ -566,12 +578,12 @@ fun OrdersScreen(nav: NavController) {
                                             }
                                         }) { Text("لغو سفارش") }
                                     }
-                                    if (o.canReturn) OutlinedButton(onClick = { returning = o }) { Text("مرجوعی") }
-                                    if (o.canSurvey) OutlinedButton(onClick = { surveying = o }) { Text("نظرسنجی") }
-                                    OutlinedButton(onClick = {
+                                    if (o.canReturn) SoftButton(onClick = { returning = o }) { Text("مرجوعی") }
+                                    if (o.canSurvey) SoftButton(onClick = { surveying = o }) { Text("نظرسنجی") }
+                                    SoftButton(onClick = {
                                         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(o.invoiceUrl)))
                                     }) { Text("فاکتور") }
-                                    OutlinedButton(enabled = !busy && o.lines.isNotEmpty(), onClick = {
+                                    SoftButton(enabled = !busy && o.lines.isNotEmpty(), onClick = {
                                         busy = true
                                         msg = ""
                                         scope.launch {
@@ -689,7 +701,7 @@ fun AddressesScreen(nav: NavController) {
     var editing by remember { mutableStateOf<Address?>(null) }
     Column(Modifier.fillMaxSize()) {
         TopBack("آدرس‌های من", nav)
-        Button(
+        FancyButton(
             onClick = { editing = Address("", "", "", "", "", "", false) },
             modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp)
         ) { Text("افزودن آدرس") }
@@ -784,7 +796,7 @@ fun FamilyScreen(nav: NavController) {
             "اعضا را اینجا ثبت کنید تا هنگام ثبت سفارش بتوانید مشخص کنید سفارش برای چه کسی است.",
             fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(16.dp, 0.dp)
         )
-        Button(
+        FancyButton(
             onClick = { editing = Member("", "", "", "") },
             modifier = Modifier.fillMaxWidth().padding(16.dp, 8.dp)
         ) { Text("افزودن عضو") }
@@ -863,7 +875,7 @@ fun SupportScreen(nav: NavController) {
         if (!Store.loggedIn) {
             Empty("برای استفاده از پشتیبانی ابتدا وارد حساب شوید")
         } else {
-            Button(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp)) { Text("تیکت یا درخواست مشاوره جدید") }
+            FancyButton(onClick = { showNew = true }, modifier = Modifier.fillMaxWidth().padding(16.dp, 4.dp)) { Text("تیکت یا درخواست مشاوره جدید") }
             Loader(tick, { Api.tickets() }) { list ->
                 if (list.isEmpty()) {
                     Empty("هنوز گفتگویی ندارید")
@@ -987,7 +999,7 @@ fun TicketScreen(nav: NavController, id: Int) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(text, { text = it }, placeholder = { Text("پیام...") }, modifier = Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
-            Button(enabled = !busy && text.isNotBlank(), onClick = {
+            FancyButton(enabled = !busy && text.isNotBlank(), onClick = {
                 busy = true
                 err = ""
                 scope.launch {
@@ -1258,7 +1270,7 @@ fun ArticleScreen(nav: NavController, id: Int) {
                     Text(a.date, fontSize = 12.sp, color = Color.Gray)
                     Text(a.content, fontSize = 15.sp, lineHeight = 24.sp)
                     if (a.video.isNotBlank()) {
-                        Button(onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(a.video))) }, modifier = Modifier.fillMaxWidth()) {
+                        FancyButton(onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(a.video))) }, modifier = Modifier.fillMaxWidth()) {
                             Text("مشاهده ویدیو")
                         }
                     }
@@ -1300,7 +1312,7 @@ fun AboutScreen(nav: NavController) {
                                 Text("آدرس فروشگاه", fontWeight = FontWeight.Bold)
                                 if (cfg.storeAddress.isNotBlank()) Text(cfg.storeAddress, fontSize = 14.sp)
                                 if (cfg.storeLat.isNotBlank() && cfg.storeLng.isNotBlank()) {
-                                    OutlinedButton(onClick = {
+                                    SoftButton(onClick = {
                                         val geo = "geo:${cfg.storeLat},${cfg.storeLng}?q=${cfg.storeLat},${cfg.storeLng}(${Uri.encode("خانه آرام")})"
                                         runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(geo))) }
                                     }) { Text("نمایش روی نقشه") }
@@ -1323,13 +1335,13 @@ fun AboutScreen(nav: NavController) {
                     item {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (cfg.instagram.isNotBlank()) {
-                                OutlinedButton(
+                                SoftButton(
                                     onClick = { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(cfg.instagram))) } },
                                     modifier = Modifier.weight(1f)
                                 ) { Text("اینستاگرام") }
                             }
                             if (cfg.telegram.isNotBlank()) {
-                                OutlinedButton(
+                                SoftButton(
                                     onClick = { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(cfg.telegram))) } },
                                     modifier = Modifier.weight(1f)
                                 ) { Text("کانال تلگرام") }
@@ -1339,7 +1351,7 @@ fun AboutScreen(nav: NavController) {
                 }
                 if (cfg.enamadUrl.isNotBlank()) {
                     item {
-                        OutlinedButton(
+                        SoftButton(
                             onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(cfg.enamadUrl))) },
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("مشاهده نماد اعتماد الکترونیکی (اینماد)") }
@@ -1483,7 +1495,7 @@ fun WalletScreen(nav: NavController) {
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Button(enabled = !busy, onClick = {
+                                    FancyButton(enabled = !busy, onClick = {
                                         busy = true
                                         msg = ""
                                         scope.launch {
@@ -1507,7 +1519,7 @@ fun WalletScreen(nav: NavController) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 OutlinedTextField(code, { code = it }, label = { Text("کد هدیه") }, singleLine = true, modifier = Modifier.weight(1f))
                                 Spacer(Modifier.width(8.dp))
-                                Button(enabled = !busy, onClick = {
+                                FancyButton(enabled = !busy, onClick = {
                                     busy = true
                                     msg = ""
                                     scope.launch {
@@ -1576,8 +1588,8 @@ fun VerifyScreen(nav: NavController) {
             Text("کد ۱۰ حرفی روی برچسب یا بسته‌بندی کالا را وارد کنید یا QR روی آن را اسکن کنید.", fontSize = 13.sp, color = Color.Gray)
             OutlinedTextField(code, { code = it }, label = { Text("کد اصالت") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(enabled = !busy && code.isNotBlank(), onClick = { check(code.trim()) }) { Text("بررسی") }
-                OutlinedButton(onClick = {
+                FancyButton(enabled = !busy && code.isNotBlank(), onClick = { check(code.trim()) }) { Text("بررسی") }
+                SoftButton(onClick = {
                     scan.launch(ScanOptions().setPrompt("کد اصالت را مقابل دوربین بگیرید").setBeepEnabled(false).setOrientationLocked(false))
                 }) { Text("اسکن با دوربین") }
             }
@@ -1682,7 +1694,7 @@ fun LockSettingsScreen(nav: NavController) {
                 fontSize = 13.sp, color = Color.Gray
             )
             if (!Store.lockEnabled) {
-                Button(onClick = { showSet = true }, modifier = Modifier.fillMaxWidth()) { Text("فعال‌سازی قفل اپ") }
+                FancyButton(onClick = { showSet = true }, modifier = Modifier.fillMaxWidth()) { Text("فعال‌سازی قفل اپ") }
             } else {
                 Text("قفل اپ فعال است", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                 if (biometricAvailable(ctx)) {
@@ -1690,7 +1702,7 @@ fun LockSettingsScreen(nav: NavController) {
                 } else {
                     Text("اثر انگشت روی این گوشی فعال یا در دسترس نیست.", fontSize = 12.sp, color = Color.Gray)
                 }
-                OutlinedButton(onClick = { showOff = true }, modifier = Modifier.fillMaxWidth()) { Text("غیرفعال کردن قفل") }
+                SoftButton(onClick = { showOff = true }, modifier = Modifier.fillMaxWidth()) { Text("غیرفعال کردن قفل") }
             }
         }
     }

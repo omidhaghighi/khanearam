@@ -109,7 +109,7 @@ private fun HeroSlider(h: Home, nav: NavController) {
         ) { i ->
             val s = slides[i]
             Box(
-                Modifier.fillMaxWidth().height(172.dp).clip(RoundedCornerShape(22.dp)).clickable {
+                Modifier.fillMaxWidth().height(172.dp).pageScale(pager, i).clip(RoundedCornerShape(22.dp)).clickable {
                     if (s.productId > 0) {
                         nav.navigate("product/${s.productId}")
                     } else if (s.route.isNotBlank()) {

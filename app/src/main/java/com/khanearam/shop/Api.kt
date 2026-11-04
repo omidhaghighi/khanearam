@@ -40,7 +40,12 @@ private fun JSONObject.toProduct(): Product = Product(
     ingredients = optString("ingredients"),
     related = optJSONArray("related").objs().map { it.toProduct() },
     preorder = optBoolean("preorder"),
-    preorderNote = optString("preorder_note")
+    preorderNote = optString("preorder_note"),
+    shortDescription = optString("short_description"),
+    sku = optString("sku"),
+    dimensions = optString("dimensions"),
+    attrs = optJSONArray("attrs").objs().map { Pair(it.optString("name"), it.optString("value")) },
+    tags = optJSONArray("tags").strs()
 )
 
 private fun JSONObject.toAddress() = Address(

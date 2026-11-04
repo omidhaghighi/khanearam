@@ -101,7 +101,7 @@ fun LockScreen() {
             )
             if (err.isNotEmpty()) Text(err, color = Color.Red)
             if (Store.bioEnabled) {
-                OutlinedButton(onClick = { tryBio() }) { Text("ورود با اثر انگشت") }
+                SoftButton(onClick = { tryBio() }) { Text("ورود با اثر انگشت") }
             }
             TextButton(onClick = { showForgot = true }) { Text("رمز را فراموش کرده‌ام") }
         }
