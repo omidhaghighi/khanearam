@@ -15,8 +15,8 @@ android {
         applicationId = "com.khanearam.shop"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.2.0"
+        versionCode = 3
+        versionName = "1.3.0"
         buildConfigField("String", "SITE_URL", "\"${cfg("SITE_URL")}\"")
         buildConfigField("String", "APP_KEY", "\"${cfg("APP_KEY")}\"")
     }

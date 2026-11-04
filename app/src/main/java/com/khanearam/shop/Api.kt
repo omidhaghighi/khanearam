@@ -127,7 +127,8 @@ object Api {
             categories = o.optJSONArray("categories").objs().map { Category(it.optInt("id"), it.optString("name"), it.optString("image")) },
             newest = o.optJSONArray("newest").objs().map { it.toProduct() },
             sale = o.optJSONArray("sale").objs().map { it.toProduct() },
-            notice = o.optString("notice")
+            notice = o.optString("notice"),
+            popular = o.optJSONArray("popular").objs().map { it.toProduct() }
         )
     }
 

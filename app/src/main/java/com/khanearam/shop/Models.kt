@@ -51,7 +51,7 @@ data class Me(
 )
 data class WheelInfo(val labels: List<String>, val spunToday: Boolean, val points: Int)
 data class SpinResult(val label: String, val won: Int, val points: Int)
-data class Home(val banners: List<Banner>, val categories: List<Category>, val newest: List<Product>, val sale: List<Product>, val notice: String)
+data class Home(val banners: List<Banner>, val categories: List<Category>, val newest: List<Product>, val sale: List<Product>, val notice: String, val popular: List<Product> = emptyList())
 data class SlotDate(val value: String, val label: String)
 
 data class Config(

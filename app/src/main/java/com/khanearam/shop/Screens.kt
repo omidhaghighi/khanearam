@@ -4,6 +4,7 @@ package com.khanearam.shop
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -137,6 +138,7 @@ fun PriceText(p: Product) {
 fun ProductCard(modifier: Modifier, p: Product, nav: NavController) {
     Card(
         modifier.clickable { nav.navigate("product/${p.id}") },
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column {
@@ -145,12 +147,12 @@ fun ProductCard(modifier: Modifier, p: Product, nav: NavController) {
                     model = p.image,
                     contentDescription = p.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(140.dp)
+                    modifier = Modifier.fillMaxWidth().height(140.dp).background(Color.White)
                 )
                 Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (p.onSale) Badge2("تخفیف", Color(0xFFD32F2F))
-                    if (p.isNew) Badge2("جدید", Color(0xFF2E7D32))
-                    if (p.isPopular) Badge2("پرفروش", Color(0xFFEF6C00))
+                    if (p.onSale) Badge2("تخفیف", Brand.pink)
+                    if (p.isNew) Badge2("جدید", Brand.violet)
+                    if (p.isPopular) Badge2("پرفروش", Brand.violetDeep)
                 }
             }
             Column(Modifier.padding(10.dp)) {
@@ -171,106 +173,6 @@ fun ProductRow(row: List<Product>, nav: NavController) {
     ) {
         row.forEach { ProductCard(Modifier.weight(1f), it, nav) }
         if (row.size == 1) Spacer(Modifier.weight(1f))
-    }
-}
-
-// ---------- صفحه اصلی ----------
-
-@Composable
-fun HomeScreen(nav: NavController) {
-    var q by remember { mutableStateOf("") }
-    Loader(Unit, { Api.home() }) { h ->
-        LazyColumn(Modifier.fillMaxSize()) {
-            if (h.notice.isNotBlank()) {
-                item {
-                    Card(Modifier.fillMaxWidth().padding(16.dp, 12.dp, 16.dp, 0.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                        Text(h.notice, color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(12.dp), fontSize = 14.sp)
-                    }
-                }
-            }
-            item {
-                Column(Modifier.padding(16.dp)) {
-                    Text("خانه آرام", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("فروشگاه محصولات زناشویی", fontSize = 13.sp, color = Color.Gray)
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = q,
-                        onValueChange = { q = it },
-                        singleLine = true,
-                        placeholder = { Text("جستجوی محصول...") },
-                        leadingIcon = { Icon(Icons.Filled.Search, null) },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        trailingIcon = { SearchActions(nav) { t -> q = t; Store.query = t; nav.navigate("list/0") } },
-                        keyboardActions = KeyboardActions(onSearch = {
-                            Store.query = q
-                            nav.navigate("list/0")
-                        }),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-            if (h.banners.isNotEmpty()) {
-                item {
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(h.banners) { b ->
-                            AsyncImage(
-                                model = b.image,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.width(300.dp).height(150.dp).clip(RoundedCornerShape(16.dp)).clickable {
-                                    if (b.productId > 0) nav.navigate("product/${b.productId}")
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-            if (h.categories.isNotEmpty()) {
-                item {
-                    Text("دسته‌بندی‌ها", fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp, 16.dp, 16.dp, 4.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(h.categories) { c ->
-                            AssistChip(onClick = {
-                                Store.query = ""
-                                nav.navigate("list/${c.id}")
-                            }, label = { Text(c.name) })
-                        }
-                    }
-                }
-            }
-            if (Store.recent.isNotEmpty()) {
-                item {
-                    Text("اخیراً دیده‌شده‌ها", fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp, 16.dp, 16.dp, 4.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(Store.recent.toList()) { f ->
-                            Column(Modifier.width(100.dp).clickable { nav.navigate("product/${f.id}") }) {
-                                AsyncImage(
-                                    model = f.image,
-                                    contentDescription = f.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(100.dp).clip(RoundedCornerShape(10.dp))
-                                )
-                                Text(f.name, maxLines = 1, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-            if (h.sale.isNotEmpty()) {
-                item { Text("تخفیف‌دارها", fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp, 16.dp, 16.dp, 4.dp)) }
-                items(h.sale.chunked(2)) { row -> ProductRow(row, nav) }
-            }
-            if (h.newest.isNotEmpty()) {
-                item { Text("جدیدترین‌ها", fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp, 16.dp, 16.dp, 4.dp)) }
-                items(h.newest.chunked(2)) { row -> ProductRow(row, nav) }
-            }
-            item {
-                TextButton(onClick = {
-                    Store.query = ""
-                    nav.navigate("list/0")
-                }, modifier = Modifier.fillMaxWidth().padding(8.dp)) { Text("مشاهده همه محصولات") }
-            }
-        }
     }
 }
 
